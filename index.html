@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doação de Rações</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #F0F2F5, #eef2f7);
+            background-attachment: fixed;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #2B2D42;
+        }
+
+        /* MENU FIXO IGUAL AO PC, SEM ROLAGEM */
+        .menu-superior {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 10px;
+            background-color: #E07A5F;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        }
+
+        .menu-superior a {
+            text-decoration: none;
+            color: #2B2D42;
+            font-weight: bold;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            transition: color 0.2s;
+        }
+
+        .menu-superior a:hover { color: #fff; }
+
+        section {
+            padding: 40px 20px;
+            border-bottom: 1px solid rgba(72, 190, 26, 0.1);
+        }
+
+        .bloco-conteudo {
+            display: flex;
+            align-items: flex-start;
+            padding: 10px;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .coluna-esquerda {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 350px;
+            width: 100%;
+            gap: 15px;
+        }
+
+        .galeria-container {
+            position: relative;
+            width: 100%;
+            height: 350px;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,.15);
+        }
+
+        .galeria-slides {
+            display: flex;
+            transition: transform .5s ease-in-out;
+            height: 100%;
+        }
+
+        .galeria-slides img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background-color: #000;
+            flex-shrink: 0;
+        }
+
+        .btn-galeria {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0,0,0,.4);
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+
+        .btn-prev { left: 10px; }
+        .btn-next { right: 10px; }
+
+        .texto-abaixo-galeria {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+            font-size: .95rem;
+            line-height: 1.5;
+            border-left: 4px solid #E07A5F;
+        }
+
+        .texto-lado {
+            display: flex;
+            flex-direction: column;
+            flex: 2 1 400px;
+            min-width: 280px;
+        }
+
+        h1, h2, h3, p { margin: 10px 0; }
+
+        #contatos a {
+            color: #548b70;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        #contatos a:hover {
+            color: #E07A5F;
+            text-decoration: underline;
+        }
+
+        .nome-principal h1 {
+            color: #E26D5C;
+            font-size: 2.2rem;
+        }
+
+        .container-doacao {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            margin-top: 25px;
+        }
+
+        .card-doacao {
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,.08);
+            flex: 1 1 350px;
+            min-width: 0;
+            overflow-x: auto;
+        }
+
+        .form-grupo { margin-bottom: 15px; }
+
+        .form-grupo label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #2B2D42;
+        }
+
+        .form-grupo input,
+        .form-grupo select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: .95rem;
+        }
+
+        .btn-enviar {
+            background-color: #E07A5F;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn-enviar:hover { background-color: #d06448; }
+
+        .tabela-doacoes {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .tabela-doacoes th,
+        .tabela-doacoes td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            font-size: .9rem;
+        }
+
+        .tabela-doacoes th {
+            background-color: #81B29A;
+            color: white;
+        }
+
+        .badge-status {
+            display: inline-block;
+            background-color: #f39c12;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: .75rem;
+            font-weight: bold;
+        }
+
+        .badge-status.concluido { background-color: #27ae60; }
+
+        .btn-acao {
+            padding: 6px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: .8rem;
+            font-weight: bold;
+            margin: 2px;
+        }
+
+        .btn-editar { background-color: #3498db; color: white; }
+        .btn-excluir { background-color: #e74c3c; color: white; }
+
+        /* Estilo para as Sanfonas (Acordeons) */
+        .conteudo-texto details {
+            background: #fff;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+            border-left: 4px solid #E07A5F;
+            transition: all 0.3s ease;
+        }
+
+        .conteudo-texto summary {
+            font-size: 1.15rem;
+            font-weight: bold;
+            color: #2B2D42;
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .conteudo-texto summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .conteudo-texto summary::after {
+            content: ' ➕';
+            float: right;
+            font-size: 0.9rem;
+            color: #E07A5F;
+        }
+
+        .conteudo-texto details[open] summary::after {
+            content: ' ➖';
+        }
+
+        .conteudo-texto details p, 
+        .conteudo-texto details ul {
+            margin-top: 15px;
+            line-height: 1.6;
+            color: #4a4d6d;
+        }
+
+        /* AJUSTE PARA O MENU CABER NO CELULAR SEM Rolar (FONTE REDUZIDA) */
+        @media (max-width: 768px) {
+            .menu-superior {
+                justify-content: space-around;
+                padding: 8px 4px;
+            }
+            .menu-superior a {
+                font-size: 0.62rem; /* Letra menor para encaixar tudo */
+                padding: 2px 3px;
+                letter-spacing: -0.2px;
+            }
+
+            .bloco-conteudo {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .galeria-container { height: 260px; }
+            .texto-lado { width: 100%; }
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="menu-superior">
+    <a href="#inicio">Conheça nossa história</a>
+    <a href="#animais">Sobre os Animais</a>
+    <a href="#ods12">ODS 12 - Consumo Consciente</a>
+    <a href="#doacao">Faça aqui sua doação</a>
+    <a href="#contatos">Contatos</a>
+</header>
+
+<section id="inicio">
+    <div class="bloco-conteudo">
+        <div class="coluna-esquerda">
+            <div class="galeria-container">
+                <div class="galeria-slides" id="trilhoSlides">
+                    <img src="01.jpeg" alt="Resgate e cuidados 1">
+                    <img src="02.jpeg" alt="Resgate e cuidados 2">
+                    <img src="03.jpeg" alt="Resgate e cuidados 3">
+                </div>
+
+                <button class="btn-galeria btn-prev"
+                        onclick="mudarSlide(-1)"
+                        aria-label="Foto anterior">&#10094;</button>
+
+                <button class="btn-galeria btn-next"
+                        onclick="mudarSlide(1)"
+                        aria-label="Próxima foto">&#10095;</button>
+            </div>
+
+            <div class="texto-abaixo-galeria">
+                <p>
+                    <strong>História Marcante de Superação:</strong>
+                    A cachorrinha <strong>Orelhuda</strong> foi encontrada magra e debilitada
+                    perto de uma pista. Após ser resgatada, tratada de <strong>TVT</strong> e
+                    <strong>doença do carrapato</strong>, foi castrada, vacinada e <strong>adotada
+                    por uma família maravilhosa!</strong>
+                </p>
+            </div>
+        </div>
+
+        <div class="texto-lado">
+            <div class="nome-principal">
+                <h1>Doação de Rações &#128062;</h1>
+            </div>
+
+            <p><strong>Nossa História: 20 Anos de Amor e Proteção Animal</strong></p>
+
+            <p>
+                Há <strong>mais de 20 anos</strong>, nossa trajetória em <strong>Nova Iguaçu</strong> é dedicada a 
+                transformar a realidade de animais abandonados e em situação de <strong>extrema vulnerabilidade</strong>. 
+                Tudo começou de forma improvisada, quando nossa fundadora trabalhava no <strong>Detran</strong> e encontrou 
+                uma cachorrinha debilitada, sem pelos e sofrendo de sarna. Ao ouvir do marido o incentivo 
+                <em>"Leva ela, você cuida e vê o que faz"</em>, iniciou-se uma missão de vida que nunca mais parou.
+            </p>
+
+            <p>
+                Hoje, mantemos um abrigo no bairro <strong>Caonze</strong> e acolhemos cerca de <strong>40 animais</strong>, 
+                enfrentando diariamente os custos com <strong>alimentação, produtos de higiene, medicamentos de alto custo 
+                e tratamentos veterinários prolongados</strong> — como o combate à grave <strong>doença do carrapato</strong>.
+            </p>
+
+            <p>
+                O trabalho vai muito além do resgate: envolve <strong>alimentação diária, vacinação, castração, reabilitação 
+                e a busca por uma adoção responsável</strong>. Cada doação de ração, remédio ou material de limpeza representa 
+                uma <strong>ajuda vital</strong> para mantermos essa rede de solidariedade viva e digna.
+            </p>
+
+            <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 0.95rem; color: #555;">
+                👇 <strong>Continue navegando abaixo</strong> para conhecer em detalhes toda a nossa trajetória de dedicação, 
+                entender o impacto do nosso projeto alinhado ao <strong>ODS 12</strong> e descobrir como você pode nos ajudar a 
+                transformar ainda mais vidas!
+            </p>
+        </div>
+    </div>
+</section>
+
+<section id="animais" class="conteudo-texto">
+    <h2>Sobre os Animais: Cuidar, Proteger e Transformar Vidas</h2>
+    <p style="margin-bottom: 25px; color: #666;">Clique nos tópicos abaixo para expandir e ler os detalhes sobre a nossa rotina, desafios e histórias:</p>
+
+    <details open>
+        <summary>🐾 Uma história de amor e dedicação à causa animal</summary>
+        <p>
+            A proteção animal é uma missão que exige <strong>amor, responsabilidade, dedicação e muita perseverança</strong>. Por trás de cada animal resgatado existe uma história, muitas vezes marcada pelo <strong>abandono, pelo medo, pela fome e pela falta de cuidados</strong>. É nesse cenário que o trabalho dos protetores independentes se torna tão importante, oferecendo a esses animais uma oportunidade de receber <strong>carinho, tratamento e uma nova chance de viver com dignidade</strong>.
+        </p>
+        <p>
+            Há <strong>mais de 20 anos</strong>, nossa história está ligada à luta pela proteção dos animais. Tudo começou com o resgate de uma cachorrinha encontrada em condições precárias, debilitada e precisando de cuidados. O que inicialmente parecia ser apenas uma atitude de compaixão se transformou em um <strong>compromisso para a vida inteira</strong>. A partir daquele primeiro resgate, outros animais foram chegando, e o desejo de ajudar se tornou cada vez mais forte.
+        </p>
+    </details>
+
+    <details>
+        <summary>🏡 O cuidado diário e a realidade dos animais acolhidos</summary>
+        <p>
+            Atualmente, o trabalho envolve <strong>aproximadamente 40 animais</strong>, que precisam de atenção e cuidados todos os dias. A rotina inclui garantir alimentação, manter os espaços limpos, observar as condições de saúde e proporcionar um <strong>ambiente seguro e acolhedor</strong>. Cada animal tem suas próprias necessidades, e muitos chegam precisando de atenção especial por causa das condições em que viviam antes do resgate.
+        </p>
+        <p>
+            A <strong>alimentação</strong> é uma das necessidades mais constantes e também um dos maiores desafios. A ração é utilizada diariamente, e os gastos aumentam conforme cresce o número de animais acolhidos. Por isso, <strong>toda doação de ração é bem-vinda</strong>, independentemente da marca ou do valor.
+        </p>
+        <p>
+            Além da ração, também são necessários <strong>produtos de limpeza, itens de higiene, xampus, sachês e alimentos adequados para filhotes e animais idosos</strong>. Os <strong>cuidados com a saúde</strong> representam um desafio significativo devido a <strong>doenças transmitidas por carrapatos</strong> e outras enfermidades de alto custo.
+        </p>
+    </details>
+
+    <details>
+        <summary>❤️ A história da Orelhuda: uma nova chance de viver</summary>
+        <p>
+            Entre as histórias marcantes vividas pela protetora está a de uma cachorrinha chamada <strong>Orelhuda</strong>. Ela foi encontrada em uma situação de vulnerabilidade, próxima ao lixo e em uma área de risco, onde poderia sofrer um acidente ao tentar atravessar a pista.
+        </p>
+        <p>
+            Com a ajuda de um morador, foi possível organizar o resgate. Quando finalmente foi encontrada, Orelhuda estava muito magrinha e enfrentou uma etapa difícil marcada por tratamentos contra <strong>doença do carrapato e TVT (tumor venéreo transmissível)</strong>.
+        </p>
+        <p>
+            Apesar das dificuldades, Orelhuda recebeu tratamento, foi <strong>castrada, vacinada e adotada por uma família maravilhosa</strong> que lhe proporcionou passeios, viagens e muito carinho. Histórias como a dela mostram que <strong>o resgate se completa quando existe a possibilidade de recuperação e adoção responsável</strong>.
+        </p>
+    </details>
+
+    <details>
+        <summary>🤝 Adoção responsável e os desafios dos protetores</summary>
+        <p>
+            Adotar um animal significa assumir uma responsabilidade que vai muito além de oferecer um lugar para ele morar. É necessário compreender que cães e gatos precisam de <strong>alimentação adequada, água limpa, ambiente seguro, cuidados veterinários, vacinação, higiene, atenção e carinho durante toda a vida</strong>.
+        </p>
+        <p>
+            A realidade dos protetores independentes envolve muitos desafios financeiros com <strong>alimentação, limpeza, medicamentos e atendimento veterinário</strong>. Por esse motivo, a proteção animal precisa ser entendida como uma <strong>responsabilidade compartilhada</strong> com o apoio da comunidade.
+        </p>
+    </details>
+
+    <details>
+        <summary>💻 Tecnologia e solidariedade a favor da proteção animal</summary>
+        <p>
+            O desenvolvimento deste site faz parte de uma iniciativa que busca utilizar a <strong>tecnologia para aproximar a comunidade da causa animal</strong>. Por meio de um espaço digital, a divulgação de informações e a organização das doações tornam-se mais acessíveis.
+        </p>
+        <p>
+            A proposta também se relaciona à <strong>TI Verde</strong> ao incentivar o <strong>uso consciente dos recursos digitais</strong> para apoiar uma ação social, transformando a intenção de ajudar em uma oportunidade concreta de colaboração.
+        </p>
+    </details>
+</section>
+
+<section id="ods12" class="conteudo-texto">
+    <h2>ODS 12: Consumo e Produção Responsáveis</h2>
+    <p>
+        O <strong>ODS 12 da ONU</strong> busca assegurar padrões de consumo e produção sustentáveis, incentivando o <strong>uso consciente de recursos, o combate ao desperdício e a mudança de comportamento</strong> da sociedade frente ao consumo de bens e seres vivos.
+    </p>
+
+    <h3>Como Nosso Site e as Doações Contribuem para o ODS 12?</h3>
+    <p>
+        Apoiar ONGs e protetores de proteção animal por meio de <strong>doações direcionadas de ração, medicamentos e materiais essenciais</strong> é uma prática direta de <strong>consumo consciente e responsabilidade social</strong>:
+    </p>
+
+    <ul>
+        <li>
+            <strong>Combate à "Mercantilização" e Posse Responsável:</strong> Animais não são produtos descartáveis. Incentivar o cuidado, a adoção e o suporte às ONGs promove a conscientização de que a posse de um animal exige <strong>compromisso contínuo</strong>, reduzindo o abandono e o consumo por impulso.
+        </li>
+        <li>
+            <strong>Redirecionamento Consciente e Reciclagem de Recursos:</strong> Materiais como <strong>mantas, jornais, bacias, caixas de transporte, coleiras e remédios dentro da validade</strong> (que muitas vezes ficariam sem uso nas casas das pessoas) ganham vida útil e destino nobre nos abrigos, evitando o lixo e o desperdício.
+        </li>
+        <li>
+            <strong>Garantia de Nutrição e Dignidade:</strong> A doação de ração supre a necessidade mais urgente e dispendiosa das ONGs. Com a alimentação garantida de forma contínua e responsável, os abrigos conseguem redirecionar seus poucos recursos financeiros para <strong>tratamentos médicos, castrações e melhorias estruturais</strong>.
+        </li>
+        <li>
+            <strong>Consumo Solidário:</strong> Ao canalizar doações para instituições sérias, transformamos a intenção de ajudar em um <strong>fluxo organizado e sustentável de insumos essenciais</strong>, fortalecendo uma rede de apoio comunitário e responsável.
+        </li>
+    </ul>
+</section>
+
+<section id="doacao">
+    <h2>Faça sua doação</h2>
+
+    <p>
+        Manter um abrigo com <strong>dezenas de animais resgatados</strong> exige muito
+        esforço diário. <strong>Toda ajuda é bem-vinda!</strong>
+    </p>
+
+    <h3>Como você pode ajudar:</h3>
+    <ul>
+        <li><strong>Ração:</strong> Aceitamos diferentes tipos e marcas de ração para cães e gatos.</li>
+        <li><strong>Medicamentos e vacinas:</strong> Precisamos de ajuda contínua para cuidar da saúde dos animais.</li>
+        <li><strong>Limpeza e higiene:</strong> Materiais como desinfetantes, xampus e sabões para manter o ambiente limpo.</li>
+    </ul>
+
+    <div class="container-doacao">
+
+        <div class="card-doacao">
+            <h3>Cadastrar Doação</h3>
+
+            <div class="form-grupo">
+                <label for="nomeDoador">Seu nome:</label>
+                <input type="text" id="nomeDoador"
+                       placeholder="Ex.: João Paulo" required>
+            </div>
+
+            <div class="form-grupo">
+                <label for="emailDoador">Seu e-mail:</label>
+                <input type="email" id="emailDoador"
+                       placeholder="seuemail@exemplo.com" required>
+            </div>
+
+            <div class="form-grupo">
+                <label for="telDoador">Telefone / WhatsApp:</label>
+                <input type="tel" id="telDoador"
+                       placeholder="(21) 98198-5656" required>
+            </div>
+
+            <div class="form-grupo">
+                <label for="tipoDoador">Tipo de doador:</label>
+                <select id="tipoDoador" required>
+                    <option value="">Selecione o tipo</option>
+                    <option value="Pessoa Física">Pessoa Física</option>
+                    <option value="Pessoa Jurídica">Pessoa Jurídica</option>
+                </select>
+            </div>
+
+            <div class="form-grupo">
+                <label for="itemDoado">Item que deseja doar:</label>
+                <input type="text" id="itemDoado"
+                       placeholder="Ex.: Saco de ração para cães 10 kg" required>
+            </div>
+
+            <div class="form-grupo">
+                <label for="selectPontoColeta">Ponto de coleta / entrega:</label>
+                <select id="selectPontoColeta" required>
+                    <option value="">Carregando pontos de coleta...</option>
+                </select>
+            </div>
+
+            <button class="btn-enviar" type="button" onclick="cadastrarDoacao()">
+                Registrar Doação
+            </button>
+        </div>
+
+        <div class="card-doacao">
+            <h3>Gerenciamento de Doações</h3>
+
+            <table class="tabela-doacoes">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Local</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody id="corpoTabelaDoacoes">
+                    <tr>
+                        <td colspan="4">Carregando doações...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<section id="contatos">
+    <h2>Contatos</h2>
+
+    <h3>Aluno de ADS: João Paulo Alves</h3>
+    <a href="https://www.linkedin.com/in/joao-alves-b4067b316/"
+       target="_blank" rel="noopener noreferrer">LinkedIn</a> |
+    <a href="https://github.com/JoaoPauloAlvees"
+       target="_blank" rel="noopener noreferrer">GitHub</a>
+
+    <p>Email: <strong>Joao.alvenne@gmail.com</strong></p>
+    <p>Telefone: <strong>(21) 98198-4075</strong></p>
+<br>
+    <h3>Marcus Vinicius Ribeiro da Silva Santos</h3>
+    <a href="https://www.linkedin.com/in/marcus-vinicius-rs-santos"
+       target="_blank" rel="noopener noreferrer">LinkedIn</a> |
+    <a href="https://github.com/Marcuvini21"
+       target="_blank" rel="noopener noreferrer">GitHub</a>
+
+    <p>Email: <strong>emiikamk1@gmail.com</strong></p>
+    <p>Telefone: <strong>(21) 96478-9795</strong></p>
+<br>
+    <h3>Luiz Octávio Vilela Ramos</h3>
+    <a href="https://www.linkedin.com/in/luiz-octávio-ramos-3b2793285/"
+       target="_blank" rel="noopener noreferrer">LinkedIn</a> |
+    <a href="https://github.com/rxmosluiz"
+       target="_blank" rel="noopener noreferrer">GitHub</a>
+
+    <p>Email: <strong>octaviovramos@gmail.com</strong></p>
+    <p>Telefone: <strong>(21) 96857-6653</strong></p> 
+    <hr style="border:0; border-top:1px solid #ccc; margin:20px 0;">
+
+   
+</section>
+
+<script>
+const SUPABASE_URL = 'https://vflsczfzlaeuvuuuanvj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_pMac6eWegY4xja4U-62FmQ_Pg45EpPo';
+
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+);
+
+// GALERIA DE FOTOS
+let slideAtual = 0;
+
+function mudarSlide(direcao) {
+    const trilho = document.getElementById('trilhoSlides');
+    const slides = trilho.querySelectorAll('img');
+
+    if (!slides.length) return;
+
+    slideAtual = (slideAtual + direcao + slides.length) % slides.length;
+    trilho.style.transform = `translateX(-${slideAtual * 100}%)`;
+}
+
+// CARREGAR PONTOS DE COLETA
+async function carregarPontosColeta() {
+    const select = document.getElementById('selectPontoColeta');
+
+    try {
+        select.innerHTML = '<option value="">Carregando pontos...</option>';
+
+        const { data, error } = await supabaseClient
+            .from('pontos_coleta')
+            .select('*');
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            select.innerHTML = '<option value="">Nenhum ponto cadastrado</option>';
+            return;
+        }
+
+        select.innerHTML = '<option value="">Selecione o local...</option>';
+
+        data.forEach((ponto) => {
+            const option = document.createElement('option');
+            option.value = ponto.id;
+            option.textContent = ponto.nome || ponto.nome_ponto || 'Local sem nome';
+            select.appendChild(option);
+        });
+
+        console.log('Pontos de coleta carregados:', data.length);
+
+    } catch (erro) {
+        console.error('Erro ao carregar pontos de coleta:', erro);
+        select.innerHTML = '<option value="">Erro ao carregar locais</option>';
+    }
+}
+
+// CARREGAR DOAÇÕES NA TABELA
+async function carregarDoacoes() {
+    const corpo = document.getElementById('corpoTabelaDoacoes');
+
+    try {
+        corpo.innerHTML = '<tr><td colspan="4">Carregando doações...</td></tr>';
+
+        const { data, error } = await supabaseClient
+            .from('doacoes')
+            .select(`
+                id,
+                item,
+                status,
+                ponto_coleta_id,
+                pontos_coleta (id, nome)
+            `)
+            .order('id', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            corpo.innerHTML = '<tr><td colspan="4">Nenhuma doação cadastrada.</td></tr>';
+            return;
+        }
+
+        corpo.innerHTML = '';
+
+        data.forEach((doacao) => {
+            const linha = document.createElement('tr');
+
+            const colunaItem = document.createElement('td');
+            colunaItem.textContent = doacao.item || 'Item não informado';
+
+            const colunaLocal = document.createElement('td');
+            colunaLocal.textContent =
+                doacao.pontos_coleta?.nome || 'Local não informado';
+
+            const colunaStatus = document.createElement('td');
+            const badge = document.createElement('span');
+            badge.className = 'badge-status';
+
+            const concluida = ['Concluída', 'Concluida'].includes(
+                (doacao.status || '').trim()
+            );
+
+            if (concluida) {
+                badge.classList.add('concluido');
+            }
+
+            badge.textContent = doacao.status || 'Pendente';
+            colunaStatus.appendChild(badge);
+
+            const colunaAcoes = document.createElement('td');
+
+            if (!concluida) {
+                const botaoConcluir = document.createElement('button');
+                botaoConcluir.type = 'button';
+                botaoConcluir.className = 'btn-acao btn-editar';
+                botaoConcluir.textContent = 'Concluir';
+                botaoConcluir.addEventListener('click', () => {
+                    atualizarStatus(doacao.id);
+                });
+
+                const botaoExcluir = document.createElement('button');
+                botaoExcluir.type = 'button';
+                botaoExcluir.className = 'btn-acao btn-excluir';
+                botaoExcluir.textContent = 'Excluir';
+                botaoExcluir.addEventListener('click', () => {
+                    excluirDoacao(doacao.id);
+                });
+
+                colunaAcoes.appendChild(botaoConcluir);
+                colunaAcoes.appendChild(botaoExcluir);
+            } else {
+                colunaAcoes.textContent = '—';
+            }
+
+            linha.appendChild(colunaItem);
+            linha.appendChild(colunaLocal);
+            linha.appendChild(colunaStatus);
+            linha.appendChild(colunaAcoes);
+
+            corpo.appendChild(linha);
+        });
+
+    } catch (erro) {
+        console.error('Erro ao carregar doações:', erro);
+        corpo.innerHTML = '<tr><td colspan="4">Erro ao carregar doações. Confira o Console.</td></tr>';
+    }
+}
+
+// CADASTRAR DOADOR E DOAÇÃO
+async function cadastrarDoacao() {
+    const nome = document.getElementById('nomeDoador').value.trim();
+    const email = document.getElementById('emailDoador').value.trim();
+    const telefone = document.getElementById('telDoador').value.trim();
+    const tipoDoador = document.getElementById('tipoDoador').value;
+    const item = document.getElementById('itemDoado').value.trim();
+    const pontoColetaId = document.getElementById('selectPontoColeta').value;
+
+    if (!nome || !email || !telefone || !tipoDoador || !item || !pontoColetaId) {
+        alert('Preencha todos os campos antes de registrar a doação.');
+        return;
+    }
+
+    try {
+        const { data: doador, error: erroDoador } = await supabaseClient
+            .from('doadores')
+            .insert([{
+                "Nome": nome,
+                "Email": email,
+                "Telefone": telefone,
+                "Tipo doador": tipoDoador
+            }])
+            .select('id')
+            .single();
+
+        if (erroDoador) {
+            console.error('Erro ao cadastrar doador:', erroDoador);
+            alert('Erro ao cadastrar doador: ' + erroDoador.message);
+            return;
+        }
+
+        const { error: erroDoacao } = await supabaseClient
+            .from('doacoes')
+            .insert([{
+                item: item,
+                status: 'Pendente',
+                doador_id: doador.id,
+                ponto_coleta_id: Number(pontoColetaId)
+            }]);
+
+        if (erroDoacao) {
+            console.error('Erro ao cadastrar doação:', erroDoacao);
+            alert(
+                'O doador foi cadastrado, mas a doação não foi registrada: ' +
+                erroDoacao.message
+            );
+            return;
+        }
+
+        alert('Doação registrada com sucesso!');
+
+        document.getElementById('nomeDoador').value = '';
+        document.getElementById('emailDoador').value = '';
+        document.getElementById('telDoador').value = '';
+        document.getElementById('tipoDoador').value = '';
+        document.getElementById('itemDoado').value = '';
+        document.getElementById('selectPontoColeta').value = '';
+
+        await carregarDoacoes();
+
+    } catch (erro) {
+        console.error('Erro inesperado ao cadastrar:', erro);
+        alert('Ocorreu um erro: ' + erro.message);
+    }
+}
+
+// ATUALIZAR STATUS
+async function atualizarStatus(id) {
+    try {
+        const { error } = await supabaseClient
+            .from('doacoes')
+            .update({ status: 'Concluída' })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        alert('Doação marcada como concluída!');
+        await carregarDoacoes();
+
+    } catch (erro) {
+        console.error('Erro ao atualizar status:', erro);
+        alert('Não foi possível atualizar o status: ' + erro.message);
+    }
+}
+
+// EXCLUIR DOAÇÃO
+async function excluirDoacao(id) {
+    if (!confirm('Tem certeza de que deseja excluir esta doação?')) {
+        return;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('doacoes')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        alert('Doação excluída com sucesso!');
+        await carregarDoacoes();
+
+    } catch (erro) {
+        console.error('Erro ao excluir doação:', erro);
+        alert('Não foi possível excluir a doação: ' + erro.message);
+    }
+}
+
+// INICIAR A PÁGINA
+document.addEventListener('DOMContentLoaded', async () => {
+    await carregarPontosColeta();
+    await carregarDoacoes();
+});
+</script>
+
+</body>
+</html>
